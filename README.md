@@ -1,0 +1,1 @@
+# Rede-pata-amiga-SCTEC
