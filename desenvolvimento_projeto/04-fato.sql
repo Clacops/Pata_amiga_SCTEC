@@ -12,7 +12,7 @@ CREATE TABLE fato_pedido (
     sk_tempo_entrega          INT NOT NULL,
     sk_loja                   INT NOT NULL,
     sk_categoria              INT NOT NULL,
-    houve_desconto            VARCHAR(15),
+    houve_desconto            INT,
     canal_pedido              VARCHAR(20),
     dt_pedido                 TIMESTAMP,
     qt_itens                  INT,
@@ -48,9 +48,10 @@ SELECT
     
     -- Padronização de Desconto
     CASE 
-        WHEN UPPER(TRIM(stg."HouveDesconto")) IN ('S', 'SIM', '1', 'X', 'TRUE', 'V') THEN 'Sim'
-        WHEN UPPER(TRIM(stg."HouveDesconto")) IN ('N', 'NAO', '0', 'FALSE', 'F') THEN 'Nao'
-        ELSE 'Nao Informado'
+        WHEN UPPER(TRIM(stg."HouveDesconto")) IN ('S', 'SIM', '1', 'X', 'TRUE', 'V') THEN 1
+        WHEN UPPER(TRIM(stg."HouveDesconto")) IN ('N', 'NAO', '0', 'FALSE', 'F') THEN 0
+        ELSE NULL --"nao informado" é Nulo(vazio)
+        --Ajuste para (Refatorado para Booleano/INT)        
     END AS houve_desconto,
     
     -- Padronização de Canal 
@@ -98,12 +99,16 @@ SELECT
 
 FROM stg_pedido stg
 LEFT JOIN dim_categoria c ON stg."CategoriaProduto" = c.categoria_origem
+
 LEFT JOIN dim_loja l ON l.chave_loja = 
     CASE 
-        WHEN TRIM(stg."Loja-Nome") = 'PATA AMIGA BLUMENAL CENTRO' THEN 'PATA AMIGA BLUMENAU CENTRO'
-        WHEN TRIM(stg."Loja-Nome") = 'PATA AMIGA FLORIPA NORTE' THEN 'PATA AMIGA FLORIANOPOLIS NORTE'
-        WHEN TRIM(stg."Loja-Nome") = 'PATA AMIGA JGUA DO SUL' THEN 'PATA AMIGA JARAGUA DO SUL'
-        ELSE UPPER(TRANSLATE(REPLACE(REPLACE(TRIM(stg."Loja-Nome"), '/SC', ''), '  ', ' '), 'ÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇáàâãäéèêëíìîïóòôõöúùûüç', 'AAAAAEEEEIIIIOOOOOUUUUCaaaaaeeeeiiiiooooouuuuc'))
+       -- 1. Primeiro testamos as exceções, mas já garantindo que estão em maiúsculo e sem o /SC
+        WHEN UPPER(REPLACE(TRIM(stg."Loja-Nome"), '/SC', '')) = 'PATA AMIGA BLUMENAL CENTRO' THEN 'PATA AMIGA BLUMENAU CENTRO'
+        WHEN UPPER(REPLACE(TRIM(stg."Loja-Nome"), '/SC', '')) = 'PATA AMIGA FLORIPA NORTE' THEN 'PATA AMIGA FLORIANOPOLIS NORTE'
+        WHEN UPPER(REPLACE(TRIM(stg."Loja-Nome"), '/SC', '')) = 'PATA AMIGA JGUA DO SUL' THEN 'PATA AMIGA JARAGUA DO SUL'
+        
+        -- 2. Depois aplicamos a regra geral para o resto (sem acentos e espaços duplos)
+        ELSE UPPER(TRANSLATE(REPLACE(REPLACE(REPLACE(TRIM(stg."Loja-Nome"), '/SC', ''), '/ SC', ''), '  ', ' '), 'ÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇáàâãäéèêëíìîïóòôõöúùûüç', 'AAAAAEEEEIIIIOOOOOUUUUCaaaaaeeeeiiiiooooouuuuc'))
     END;
 
 -- 3. AUDITORIA FINAL
