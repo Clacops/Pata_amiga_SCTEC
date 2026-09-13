@@ -1,9 +1,64 @@
 # Rede-pata-amiga-SCTEC
-# Rede-pata-amiga-SCTEC
 
+# 🐾 Projeto Data Warehouse - Pata Amiga (SCTEC)
 
+Pipeline de dados e análise estratégica desenvolvida para a rede de pet shops **Pata Amiga**, integrando modelagem dimensional em PostgreSQL, scripts de extração/automação em Python e visualizações gerenciais de alto nível.
+
+---
+
+## 📂 Estrutura do Projeto
+
+```text
+Pata_amiga_SCTEC/
+├── anexos/                   # Imagens, diagramas do modelo estrela e materiais visuais
+├── desenvolvimento_projeto/  # Scripts SQL organizados por etapas do Data Warehouse
+│   ├── 00-conferencia.sql
+│   ├── 01-carga-staging.sql
+│   ├── 02-dimensoes-prontas.sql
+│   ├── 03-dimensoes.sql
+│   ├── 04-fato.sql
+│   └── 05-perguntas-respostas.sql
+├── p5a/                      # Bloco P5a: Cruzamento de densidade de vendas, logística e população
+│   ├── analise_p5a.sql
+│   ├── tabela_grafico_p5a.py
+│   ├── tabela_densidade_p5a.csv
+│   └── grafico_barras_duplas_p5a.jpg
+├── p5b/                      # Bloco P5b: Faturamento por faixa de franquia (Visão de Cadastro Atual)
+│   ├── analise_p5b.sql
+│   ├── tabela_grafico_p5b.py
+│   ├── tabela_faturamento_franquia_p5b.csv
+│   └── grafico_colunas_p5b.jpg
+├── p5c/                      # Bloco P5c: Auditoria de qualidade de dados, resíduos e anomalias
+│   ├── analise_p5c.sql
+│   ├── tabela_grafico_p5c.py
+│   ├── tabela_auditoria_residuos_p5c.csv
+│   └── grafico_auditoria_residuos_p5c.jpg
+├── .env                      # Variáveis de ambiente locais e credenciais (ignorado no Git)
+├── .env.example              # Modelo de configuração de credenciais
+├── .gitignore                # Arquivos, senhas e extensões ignorados pelo controle de versão
+├── README.md                 # Documentação principal e guia do projeto
+└── requirements.txt          # Dependências e bibliotecas Python do projeto
 ## Passo 3: Modelo Estrela
 ![Diagrama do Modelo Estrela](estrela_fato_pata.png)
+
+🛠️ Tecnologias e Ferramentas Utilizadas
+Banco de Dados: PostgreSQL 17 / pgAdmin 4
+
+Linguagem de Consulta: SQL padrão (compatível com restrições de projeto: sem CTEs e sem Window Functions)
+
+Linguagem de Automação & Análise: Python (Pandas, Matplotlib, SQLAlchemy, Psycopg2)
+
+Controle de Versão: Git e GitHub
+
+🚀 Como Executar o Projeto
+Clone o repositório:
+
+Bash
+git clone <url-do-repositorio>
+cd Pata_amiga_SCTEC
+Instale as dependências do Python:
+Bash
+pip install -r requirements.txt
 
 As cinco perguntas de negócio:
 
