@@ -72,9 +72,6 @@ GROUP BY c.nome_categoria
 ORDER BY faturamento_categoria DESC;
 
 
--- =====================================================================================
---  P2 - QUAL CATEGORIA CONCENTRA O FATURAMENTO?
--- =====================================================================================
 
 
 
@@ -88,10 +85,7 @@ ORDER BY faturamento_categoria DESC;
 
 -- >>> ESCREVA AQUI a consulta da P3
 
---- =====================================================================================
---  P3 - A POLÍTICA DE DESCONTO E REPRESENTATIVIDADE POR CANAL
--- =====================================================================================
--- =====================================================================================
+- =====================================================================================
 --  P3 - A POLÍTICA DE DESCONTO E REPRESENTATIVIDADE POR CANAL
 -- =====================================================================================
 SELECT 
@@ -157,46 +151,60 @@ ORDER BY faturamento_rateado DESC;
 
 -- >>> ESCREVA AQUI as consultas da P5
 
+-- =====================================================================================
+-- P5 - MATRIZ DE CORTE COM SUBCONSULTA (Sem CTE e sem Window Function)
+-- Foco: Isolar praças com alta densidade E tempo de entrega acima da média da rede
+-- =====================================================================================
+
+SELECT 
+    l.nome_loja,
+    ROUND((SUM(f.qt_itens * b.fator_publico) * 1000.0) / NULLIF(p.domicilios_com_pet, 0), 2) AS itens_por_mil_habitantes,
+    ROUND(AVG(f.dias_total_ate_entrega), 2) AS tempo_medio_entrega_dias
+
+FROM fato_pedido f
+JOIN dim_loja l ON f.sk_loja = l.sk_loja
+JOIN bridge_loja_praca b ON l.cod_loja = b.cod_loja
+JOIN dim_praca p ON b.sk_praca = p.sk_praca
+
+GROUP BY l.nome_loja, p.domicilios_com_pet
+
+-- Filtra usando uma subconsulta simples para pegar a média geral de dias de entrega da rede
+HAVING AVG(f.dias_total_ate_entrega) > (
+    SELECT AVG(f_sub.dias_total_ate_entrega) 
+    FROM fato_pedido f_sub
+)
+
+-- Ordena priorizando quem tem mais itens por mil habitantes e os maiores prazos
+ORDER BY itens_por_mil_habitantes DESC, tempo_medio_entrega_dias DESC;
 
 -- =====================================================================================
---  P5 (a) - DENSIDADE DE VENDAS (ITENS / MIL HABITANTES) E TEMPO MÉDIO DE LOGÍSTICA
---  ORDENADOS POR MIL HABITANTES (DESCENDENTE)
--- ===================================================================================
+-- P5 (a) - DENSIDADE DE VENDAS (ITENS / MIL HABITANTES) E TEMPO MÉDIO DE LOGÍSTICA
+-- ORDENADOS POR MIL HABITANTES (DESCENDENTE)
+-- =====================================================================================
+-- Regra: Numerador na Fato (qt_itens com rateio via bridge) e 
+-- Denominador na Dimensão (domicilios_com_pet), calculado dinamicamente.
+-- =====================================================================================
+
 SELECT 
     l.nome_loja,
     p.nome_praca,
     p.domicilios_com_pet AS populacao_referencia,
-    -- Aplicando o fator de rateio entre lojas na quantidade de itens para evitar duplicação
+    
+    -- 1. Numerador na fato rateado pela ponte para evitar duplicação de vendas
     ROUND(SUM(f.qt_itens * b.fator_publico), 0) AS total_itens_rateados, 
-    -- Aplicando o rateio no cálculo de densidade
+    
+    -- 2. Cálculo dinâmico da densidade: (Itens * 1000) / População da Dimensão
     ROUND((SUM(f.qt_itens * b.fator_publico) * 1000.0) / NULLIF(p.domicilios_com_pet, 0), 2) AS itens_por_mil_habitantes,
+    
+    -- 3. Cruzamento com o indicador de eficiência logística
     ROUND(AVG(f.dias_total_ate_entrega), 1) AS tempo_medio_entrega_dias
+
 FROM fato_pedido f
 JOIN dim_loja l ON f.sk_loja = l.sk_loja
 JOIN bridge_loja_praca b ON l.cod_loja = b.cod_loja
 JOIN dim_praca p ON b.sk_praca = p.sk_praca
 GROUP BY l.nome_loja, p.nome_praca, p.domicilios_com_pet
 ORDER BY itens_por_mil_habitantes DESC;
-
--- =====================================================================================
---  P5 (a) - DENSIDADE DE VENDAS x LOGÍSTICA 
---   ORDENADOS POR TEMPO MEDIA ENTREGA (DESCENDENTE)
--- ===================================================================================
-SELECT 
-    l.nome_loja,
-    p.nome_praca,
-    p.domicilios_com_pet AS populacao_referencia,
-    -- Aplicando o rateio na quantidade de itens para evitar duplicação
-    ROUND(SUM(f.qt_itens * b.fator_publico), 0) AS total_itens_rateados,
-    -- Aplicando o rateio no cálculo de densidade
-    ROUND((SUM(f.qt_itens * b.fator_publico) * 1000.0) / NULLIF(p.domicilios_com_pet, 0), 2) AS itens_por_mil_habitantes,
-    ROUND(AVG(f.dias_total_ate_entrega), 1) AS tempo_medio_entrega_dias
-FROM fato_pedido f
-JOIN dim_loja l ON f.sk_loja = l.sk_loja
-JOIN bridge_loja_praca b ON l.cod_loja = b.cod_loja
-JOIN dim_praca p ON b.sk_praca = p.sk_praca
-GROUP BY l.nome_loja, p.nome_praca, p.domicilios_com_pet
-ORDER BY tempo_medio_entrega_dias DESC;
 
 
 -- =====================================================================================

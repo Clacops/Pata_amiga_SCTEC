@@ -1,5 +1,5 @@
 -- =====================================================================================
---  ARQUIVO 1:  CARGA DA AREA DE STAGING
+--  ARQUIVO 1:  CARGA DA AREA DE STAGING   DADOS NAO TRATADOS
 --  Case: Pata Amiga - rede de petshops de SC  |  PostgreSQL 16
 -- =====================================================================================
 --  Rode este arquivo PRIMEIRO. Ele cria o banco e carrega as TRES tabelas de
@@ -15,9 +15,9 @@
 --      psql -U postgres -d postgres -f 01-carga-staging.sql
 -- =====================================================================================
 
-DROP DATABASE IF EXISTS dw_pata_amiga;
-CREATE DATABASE dw_pata_amiga;
-\c dw_pata_amiga
+--DROP DATABASE IF EXISTS dw_pata_amiga;
+--CREATE DATABASE dw_pata_amiga;
+--\c dw_pata_amiga
 
 -- ----------------------------------------------------------------------------------
 -- stg_pedido  (4044 linhas)
