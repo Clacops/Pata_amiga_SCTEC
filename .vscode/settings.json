@@ -43,5 +43,6 @@
             "database": "dw_pata_amiga",
             "username": "postgres"
         }
-    ]
+    ],
+    "python-envs.defaultEnvManager": "ms-python.python:system"
 }

@@ -39,14 +39,13 @@ print("\n--- Resultado da Pergunta 1 ---")
 print(df.to_string(index=False))
 
 
-
 # Garante que o diretório de saída seja o mesmo onde o script está localizado (anexos/p1)
 output_dir = os.path.dirname(os.path.abspath(__file__))
 
-os.makedirs(output_dir, exist_ok=True)
-csv_path = os.path.join(output_dir, "tabela_tempos_entrega_p1.csv")
-df.to_csv(csv_path, index=False, encoding="utf-8-sig")
-print(f"\nTabela salva em: {csv_path}")
+##os.makedirs(output_dir, exist_ok=True)
+##csv_path = os.path.join(output_dir, "tabela_tempos_entrega_p1.csv")
+##df.to_csv(csv_path, index=False, encoding="utf-8-sig")
+##print(f"\nTabela salva em: {csv_path}")
 
 # Gerando o Gráfico e salvando no mesmo lugar
 plt.figure(figsize=(10, 5))

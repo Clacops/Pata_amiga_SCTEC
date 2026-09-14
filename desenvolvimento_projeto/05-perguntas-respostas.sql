@@ -2,7 +2,7 @@
 --  ARQUIVO 5:  AS CINCO PERGUNTAS DE NEGOCIO
 --  Case: Pata Amiga - rede de petshops de SC  |  PostgreSQL 16
 -- =====================================================================================
---  Rode depois de: 04-fato.sql
+--  Rode depois de: 04-fato.sql 
 --
 --  Cada pergunta e UMA consulta: um SELECT com JOIN e GROUP BY. A subconsulta
 --  aparece na P2 e na P5, e serve para trazer o total da rede como denominador.
@@ -33,22 +33,6 @@ GROUP BY l.nome_loja
 ORDER BY media_total_ate_entrega DESC;
 
 
--- =====================================================================================
---  RESPOSTA DE P1 : ONDE ESTA O GARGALO DO PROCESSO DE ENTREGA?
--- =====================================================================================
-
---O abismo no tempo total: Perceba que as 9 primeiras lojas da lista (de Ituporanga até 
---Presidente Getúlio) demoram entre 14 e 16 dias no total para entregar o pedido. 
---Já o restante da rede (de Curitibanos para baixo) entrega em cerca de 7 a 8 dias. 
---Há um grupo específico de lojas levando o dobro do tempo!
---9 lojas mais lentas, a separação da mercadoria (media_separacao_nota) é rápida 
---(menos de 1 dia). O problema gritante está na coluna media_nota_despacho
--- (o tempo entre a emissão da nota fiscal e a transportadora de fato despachar o pedido).
---A descoberta: Nessas lojas mais lentas, a mercadoria fica parada esperando o despacho por 
---quase 8 a 9 dias, enquanto nas lojas eficientes essa espera é de apenas 3 dias.
--- A sua resposta de negócio para a diretoria seria: "O gargalo crítico da rede está na etapa de despacho (pós-faturamento) em um grupo específico de 9 lojas (liderado por Ituporanga e Santo Amaro da Imperatriz), onde a mercadoria fica retida por quase 10 dias.
--- O restante do processo logístico e as demais lojas operam dentro da normalidade."
-
 
 
 -- =====================================================================================
@@ -58,7 +42,7 @@ ORDER BY media_total_ate_entrega DESC;
 --  PADRONIZADO (nunca pela grafia crua). O percentual do total usa uma
 --  subconsulta com o faturamento da rede como denominador.
 
--- >>> ESCREVA AQUI a consulta da P2
+--  ESCREVA AQUI a consulta da P2
 
 SELECT 
     c.nome_categoria,
@@ -73,8 +57,6 @@ ORDER BY faturamento_categoria DESC;
 
 
 
-
-
 -- =====================================================================================
 --  P3 - O DESCONTO FUNCIONA IGUAL EM TODO CANAL?
 -- =====================================================================================
@@ -83,11 +65,11 @@ ORDER BY faturamento_categoria DESC;
 --  Confira se o WhatsApp aparece - se nao, o CASE do arquivo 04 testou APP antes
 --  de WHATS.
 
--- >>> ESCREVA AQUI a consulta da P3
+--  ESCREVA AQUI a consulta da P3
 
-- =====================================================================================
+--=====================================================================================
 --  P3 - A POLÍTICA DE DESCONTO E REPRESENTATIVIDADE POR CANAL
--- =====================================================================================
+--=====================================================================================
 SELECT 
     canal_pedido,
     
@@ -108,7 +90,6 @@ FROM fato_pedido
 GROUP BY canal_pedido
 ORDER BY share_faturamento_perc DESC;
 
---ACRESCENTO AQUI A TABELA ANALISE SAZONALIDADE???
 
 -- =====================================================================================
 --  P4 - QUAL PRACA DE ATENDIMENTO CONCENTRA O FATURAMENTO?
@@ -124,17 +105,29 @@ ORDER BY share_faturamento_perc DESC;
 -- =====================================================================================
 --  P4 - QUAL PRAÇA DE ATENDIMENTO CONCENTRA O FATURAMENTO? (Com Rateio de Praça)
 -- =====================================================================================
-SELECT 
-    p.nome_praca, 
-    p.domicilios_com_pet, 
-    ROUND(SUM(f.vl_liquido * b.fator_publico), 2) AS faturamento_rateado,
-    COUNT(DISTINCT f.sk_pedido) AS total_pedidos_envolvidos
-FROM fato_pedido f
-JOIN dim_loja l ON f.sk_loja = l.sk_loja
-JOIN bridge_loja_praca b ON l.cod_loja = b.cod_loja -- Se der erro aqui, me avise o nome da coluna na dim_loja
-JOIN dim_praca p ON b.sk_praca = p.sk_praca
-GROUP BY p.nome_praca, p.domicilios_com_pet
-ORDER BY faturamento_rateado DESC;
+
+
+SELECT d.cod_praca, d.nome_praca, d.domicilios_com_pet,
+ROUND(SUM(f.vl_liquido*b.fator_publico),2) AS faturamento_rateado,
+ROUND(100.0*SUM(f.vl_liquido*b.fator_publico)/(SELECT SUM(vl_liquido) FROM fato_pedido),2) AS percentual_rede,
+ROUND(100.0*d.domicilios_com_pet/(SELECT SUM(domicilios_com_pet) FROM dim_praca WHERE sk_praca <> -1),2) AS percentual_domicilios,
+ROUND(SUM(f.vl_liquido*b.fator_publico)/d.domicilios_com_pet,2) AS reais_por_domicilio
+FROM fato_pedido f JOIN dim_loja l ON l.sk_loja=f.sk_loja
+JOIN bridge_loja_praca b ON b.cod_loja=l.cod_loja
+JOIN dim_praca d ON d.sk_praca=b.sk_praca
+GROUP BY d.cod_praca,d.nome_praca,d.domicilios_com_pet ORDER BY faturamento_rateado DESC;
+
+
+SELECT COUNT(*) AS pedidos_sem_loja, ROUND(SUM(vl_liquido),2) AS faturamento_sem_praca
+FROM fato_pedido WHERE sk_loja=-1;
+
+
+SELECT (SELECT SUM(vl_liquido) FROM fato_pedido) AS total_rede,
+(SELECT SUM(f.vl_liquido*b.fator_publico) FROM fato_pedido f JOIN dim_loja l ON l.sk_loja=f.sk_loja JOIN bridge_loja_praca b ON b.cod_loja=l.cod_loja) AS total_rateado,
+(SELECT SUM(vl_liquido) FROM fato_pedido WHERE sk_loja=-1) AS sem_loja,
+ROUND((SELECT SUM(vl_liquido) FROM fato_pedido)
+- (SELECT SUM(f.vl_liquido*b.fator_publico) FROM fato_pedido f JOIN dim_loja l ON l.sk_loja=f.sk_loja JOIN bridge_loja_praca b ON b.cod_loja=l.cod_loja)
+- (SELECT SUM(vl_liquido) FROM fato_pedido WHERE sk_loja=-1),2) AS diferenca;
 
 
 -- =====================================================================================
@@ -227,26 +220,45 @@ ORDER BY faturamento_total DESC;
 --  P5 (c) - MEDIÇÃO DOS RESÍDUOS (Auditoria de Qualidade)
 --  (c) --Meça o que ficou de fora: pedidos sem loja, entregas nao concluidas,
 --      itens ou valores em branco/zerados  
+
+--  AUDITORIA DE RESÍDUOS E ANOMALIAS (Com Linha de Total Geral)
 -- =====================================================================================
 SELECT 
-    'Pedidos sem loja identificada' AS indicador, 
-    COUNT(*) AS total_registros
-FROM fato_pedido 
--- buscando a chave -1 
-WHERE sk_loja = -1 
+    'Total Geral de Pedidos (Base)' AS indicador,
+    COUNT(*) AS total_registros,
+    100.00 AS percentual
+FROM fato_pedido
 
 UNION ALL
 
 SELECT 
-    'Entregas não concluídas' AS indicador, 
-    COUNT(*) AS total_registros
-FROM fato_pedido 
-WHERE dias_total_ate_entrega IS NULL
+    'Entregas não concluídas' AS indicador,
+    SUM(CASE WHEN dias_total_ate_entrega IS NULL THEN 1 ELSE 0 END) AS total_registros,
+    ROUND(100.0 * SUM(CASE WHEN dias_total_ate_entrega IS NULL THEN 1 ELSE 0 END) / COUNT(*), 2) AS percentual
+FROM fato_pedido
 
 UNION ALL
 
 SELECT 
-    'Itens ou valores em branco/zerados' AS indicador, 
-    COUNT(*) AS total_registros
-FROM fato_pedido 
-WHERE qt_itens IS NULL OR qt_itens = 0 OR vl_liquido IS NULL OR vl_liquido = 0;
+    'Itens em branco ' AS indicador,
+    SUM(CASE WHEN qt_itens IS NULL THEN 1 ELSE 0 END) AS total_registros,
+    ROUND(100.0 * SUM(CASE WHEN qt_itens IS NULL THEN 1 ELSE 0 END) / COUNT(*), 2) AS percentual
+FROM fato_pedido
+
+UNION ALL
+
+SELECT 
+    'Ítens sem valor' AS indicador,
+    SUM(CASE WHEN vl_liquido IS NULL THEN 1 ELSE 0 END) AS total_registros,
+    ROUND(100.0 * SUM(CASE WHEN vl_liquido IS NULL THEN 1 ELSE 0 END) / COUNT(*), 2) AS percentual
+FROM fato_pedido
+
+UNION ALL
+
+SELECT 
+    'Pedidos sem loja identificada' AS indicador,
+    SUM(CASE WHEN sk_loja = -1 THEN 1 ELSE 0 END) AS total_registros,
+    ROUND(100.0 * SUM(CASE WHEN sk_loja = -1 THEN 1 ELSE 0 END) / COUNT(*), 2) AS percentual
+FROM fato_pedido
+
+ORDER BY total_registros DESC;
