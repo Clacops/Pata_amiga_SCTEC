@@ -1,0 +1,12 @@
+
+------------------------------------------------------------
+AUDITORIA RESÍDUOS QUALIDADE
+------------------------------------------------------------
+ indicador                     | total_registros | percentual
+------------------------------------------------------------
+Total Geral de Pedidos (Base) |            4044 |     100.00
+Entregas não concluídas       |            1953 |      48.29
+Itens em branco               |             257 |       6.36
+Ítens sem valor               |             121 |       2.99
+Pedidos sem loja identificada |               3 |       0.07
+------------------------------------------------------------

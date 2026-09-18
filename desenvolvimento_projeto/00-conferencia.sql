@@ -17,6 +17,7 @@
 -- =====================================================================================
 --  DEPOIS DO 01 - A STAGING
 -- =====================================================================================
+
 SELECT 'stg_pedido'     AS tabela, COUNT(*) AS linhas, 4044 AS esperado FROM stg_pedido
 UNION ALL SELECT 'stg_loja',       COUNT(*), 32 FROM stg_loja
 UNION ALL SELECT 'stg_loja_praca', COUNT(*), 48 FROM stg_loja_praca;

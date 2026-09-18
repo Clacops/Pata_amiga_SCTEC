@@ -1,7 +1,7 @@
 -- =====================================================================================
 -- ARQUIVO 04: CRIAÇÃO E CARGA DA TABELA FATO_PEDIDO
 -- =====================================================================================
-
+TRUNCATE TABLE fato_pedido RESTART IDENTITY;
 -- 1. RECRIANDO A ESTRUTURA OFICIAL DA TABELA FATO (Conforme Encarte 7)
 DROP TABLE IF EXISTS fato_pedido;
 

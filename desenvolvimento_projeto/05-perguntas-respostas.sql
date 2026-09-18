@@ -19,47 +19,78 @@
 --  dias_total_ate_entrega e o processo inteiro, nao um dos quatro intervalos.
 
 -- >>> ESCREVA AQUI a consulta da P1
+
+/*
+| Métrica / Coluna            | Tipo | Descrição                                              |
+|-----------------------------|------|--------------------------------------------------------|
+| dias_integracao_separacao   | INT  | Dias entre o ERP e a separação (carga)                 |
+| dias_separacao_nota         | INT  | Dias entre a separação e a emissão da NF               |
+| dias_nota_despacho          | INT  | Dias entre a NF e o despacho logístico                 |
+| dias_despacho_entrega       | INT  | Dias entre o despacho logístico e a entrega ao cliente |
+| dias_total_ate_entrega      | INT  | Dias totais (ERP até entrega) - Resposta da P1         |
+*/
+
+-- P1-conhecendo os portes das empresas (médias tempo)
+SELECT l.porte, COUNT(*) AS pedidos,
+ROUND(AVG(f.dias_integracao_separacao),2) AS integracao_separacao,
+ROUND(AVG(f.dias_separacao_nota),2) AS separacao_nota,
+ROUND(AVG(f.dias_nota_despacho),2) AS nota_despacho,
+ROUND(AVG(f.dias_despacho_entrega),2) AS despacho_entrega,
+ROUND(AVG(f.dias_total_ate_entrega),2) AS total_erp_entrega,
+COUNT(f.dias_total_ate_entrega) AS entregas_concluidas
+FROM fato_pedido f JOIN dim_loja l ON l.sk_loja=f.sk_loja
+GROUP BY l.porte ORDER BY l.porte;
+
+
+-- Conhecendo a rede ( médias)
+SELECT ROUND(AVG(dias_integracao_separacao),2) AS integracao_separacao,
+ROUND(AVG(dias_separacao_nota),2) AS separacao_nota,
+ROUND(AVG(dias_nota_despacho),2) AS nota_despacho,
+ROUND(AVG(dias_despacho_entrega),2) AS despacho_entrega,
+ROUND(AVG(dias_total_ate_entrega),2) AS total_erp_entrega,
+COUNT(dias_total_ate_entrega) AS entregas_concluidas FROM fato_pedido;
+
+--Portes: Totalização exclusiva para pedidos e entregas concluídas
 SELECT 
-    l.nome_loja,
-    ROUND(AVG(f.dias_integracao_separacao), 2) AS media_integracao_separacao,
-    ROUND(AVG(f.dias_separacao_nota), 2)       AS media_separacao_nota,
-    ROUND(AVG(f.dias_nota_despacho), 2)        AS media_nota_despacho,
-    ROUND(AVG(f.dias_despacho_entrega), 2)     AS media_despacho_entrega,
-    ROUND(AVG(f.dias_total_ate_entrega), 2)    AS media_total_ate_entrega,
-    COUNT(f.sk_pedido)                         AS total_pedidos_avaliados
-FROM fato_pedido f
-INNER JOIN dim_loja l ON f.sk_loja = l.sk_loja
-GROUP BY l.nome_loja
-ORDER BY media_total_ate_entrega DESC;
-
-
--- =====================================================================================
---  RESPOSTA DE P1 : ONDE ESTA O GARGALO DO PROCESSO DE ENTREGA?
--- =====================================================================================
-
---O abismo no tempo total: Perceba que as 9 primeiras lojas da lista (de Ituporanga até 
---Presidente Getúlio) demoram entre 14 e 16 dias no total para entregar o pedido. 
---Já o restante da rede (de Curitibanos para baixo) entrega em cerca de 7 a 8 dias. 
---Há um grupo específico de lojas levando o dobro do tempo!
---9 lojas mais lentas, a separação da mercadoria (media_separacao_nota) é rápida 
---(menos de 1 dia). O problema gritante está na coluna media_nota_despacho
--- (o tempo entre a emissão da nota fiscal e a transportadora de fato despachar o pedido).
---A descoberta: Nessas lojas mais lentas, a mercadoria fica parada esperando o despacho por 
---quase 8 a 9 dias, enquanto nas lojas eficientes essa espera é de apenas 3 dias.
--- A sua resposta de negócio para a diretoria seria: "O gargalo crítico da rede está na etapa de despacho (pós-faturamento) em um grupo específico de 9 lojas (liderado por Ituporanga e Santo Amaro da Imperatriz), onde a mercadoria fica retida por quase 10 dias.
--- O restante do processo logístico e as demais lojas operam dentro da normalidade."
+    COALESCE(l.porte, 'TOTAL GERAL') AS porte,
+    COUNT(*) AS pedidos,
+    CASE 
+        WHEN l.porte IS NOT NULL THEN ROUND(AVG(f.dias_integracao_separacao), 2)::TEXT 
+        ELSE '-' 
+    END AS integracao_separacao,
+    CASE 
+        WHEN l.porte IS NOT NULL THEN ROUND(AVG(f.dias_separacao_nota), 2)::TEXT 
+        ELSE '-' 
+    END AS separacao_nota,
+    CASE 
+        WHEN l.porte IS NOT NULL THEN ROUND(AVG(f.dias_nota_despacho), 2)::TEXT 
+        ELSE '-' 
+    END AS nota_despacho,
+    CASE 
+        WHEN l.porte IS NOT NULL THEN ROUND(AVG(f.dias_despacho_entrega), 2)::TEXT 
+        ELSE '-' 
+    END AS despacho_entrega,
+    CASE 
+        WHEN l.porte IS NOT NULL THEN ROUND(AVG(f.dias_total_ate_entrega), 2)::TEXT 
+        ELSE '-' 
+    END AS total_erp_entrega,
+    COUNT(f.dias_total_ate_entrega) AS entregas_concluidas
+FROM fato_pedido f 
+JOIN dim_loja l ON l.sk_loja = f.sk_loja
+GROUP BY ROLLUP(l.porte)
+ORDER BY (l.porte IS NULL), l.porte;
 
 
 
 -- =====================================================================================
 --  P2 - QUAL CATEGORIA CONCENTRA O FATURAMENTO?
 -- =====================================================================================
---  Esta e a pergunta que paga a dim_categoria. Agrupe pelo nome_categoria
+--  Esta e a pergunta que pega a dim_categoria. Agrupe pelo nome_categoria
 --  PADRONIZADO (nunca pela grafia crua). O percentual do total usa uma
 --  subconsulta com o faturamento da rede como denominador.
 
 -- >>> ESCREVA AQUI a consulta da P2
-
+-- Faturamento por categoria produto 
 SELECT 
     c.nome_categoria,
     SUM(f.vl_liquido) AS faturamento_categoria,
@@ -71,10 +102,13 @@ INNER JOIN dim_categoria c ON f.sk_categoria = c.sk_categoria
 GROUP BY c.nome_categoria
 ORDER BY faturamento_categoria DESC;
 
-
--- =====================================================================================
---  P2 - QUAL CATEGORIA CONCENTRA O FATURAMENTO?
--- =====================================================================================
+-- faturamento por porte loja
+SELECT 
+l.porte, c.nome_categoria, 
+ROUND(SUM(f.vl_liquido),2) AS faturamento
+FROM fato_pedido f JOIN dim_categoria c ON c.sk_categoria=f.sk_categoria
+JOIN dim_loja l ON l.sk_loja=f.sk_loja
+GROUP BY l.porte,c.nome_categoria ORDER BY l.porte,faturamento DESC;
 
 
 
@@ -88,12 +122,6 @@ ORDER BY faturamento_categoria DESC;
 
 -- >>> ESCREVA AQUI a consulta da P3
 
---- =====================================================================================
---  P3 - A POLÍTICA DE DESCONTO E REPRESENTATIVIDADE POR CANAL
--- =====================================================================================
--- =====================================================================================
---  P3 - A POLÍTICA DE DESCONTO E REPRESENTATIVIDADE POR CANAL
--- =====================================================================================
 SELECT 
     canal_pedido,
     
@@ -114,7 +142,7 @@ FROM fato_pedido
 GROUP BY canal_pedido
 ORDER BY share_faturamento_perc DESC;
 
---ACRESCENTO AQUI A TABELA ANALISE SAZONALIDADE???
+
 
 -- =====================================================================================
 --  P4 - QUAL PRACA DE ATENDIMENTO CONCENTRA O FATURAMENTO?
@@ -127,20 +155,44 @@ ORDER BY share_faturamento_perc DESC;
 
 -- >>> ESCREVA AQUI a consulta da P4
 
--- =====================================================================================
---  P4 - QUAL PRAÇA DE ATENDIMENTO CONCENTRA O FATURAMENTO? (Com Rateio de Praça)
--- =====================================================================================
-SELECT 
-    p.nome_praca, 
-    p.domicilios_com_pet, 
-    ROUND(SUM(f.vl_liquido * b.fator_publico), 2) AS faturamento_rateado,
-    COUNT(DISTINCT f.sk_pedido) AS total_pedidos_envolvidos
-FROM fato_pedido f
-JOIN dim_loja l ON f.sk_loja = l.sk_loja
-JOIN bridge_loja_praca b ON l.cod_loja = b.cod_loja -- Se der erro aqui, me avise o nome da coluna na dim_loja
-JOIN dim_praca p ON b.sk_praca = p.sk_praca
-GROUP BY p.nome_praca, p.domicilios_com_pet
+SELECT
+ d.nome_praca, d.domicilios_com_pet,
+    ROUND(SUM(f.vl_liquido*b.fator_publico),2) AS faturamento_rateado,
+    ROUND(100.0*SUM(f.vl_liquido*b.fator_publico)/(SELECT SUM(vl_liquido) FROM fato_pedido),2) AS percentual_rede,
+    ROUND(100.0*d.domicilios_com_pet/(SELECT SUM(domicilios_com_pet) FROM dim_praca WHERE sk_praca <> -1),2) AS percentual_domicilios,
+    ROUND(SUM(f.vl_liquido*b.fator_publico)/d.domicilios_com_pet,2) AS reais_por_domicilio
+    FROM fato_pedido f JOIN dim_loja l ON l.sk_loja=f.sk_loja
+JOIN bridge_loja_praca b ON b.cod_loja=l.cod_loja
+JOIN dim_praca d ON d.sk_praca=b.sk_praca
+GROUP BY d.nome_praca,d.domicilios_com_pet 
 ORDER BY faturamento_rateado DESC;
+ 
+ SELECT
+    d.nome_praca, d.domicilios_com_pet,
+    ROUND(SUM(f.vl_liquido*b.fator_publico),2) AS faturamento_rateado,
+    ROUND(100.0*SUM(f.vl_liquido*b.fator_publico)/(SELECT SUM(vl_liquido) FROM fato_pedido),2) AS percentual_rede,
+    ROUND(100.0*d.domicilios_com_pet/(SELECT SUM(domicilios_com_pet) FROM dim_praca WHERE sk_praca <> -1),2) AS percentual_domicilios,
+    ROUND(SUM(f.vl_liquido*b.fator_publico)/d.domicilios_com_pet,2) AS reais_por_domicilio
+    FROM fato_pedido f JOIN dim_loja l ON l.sk_loja=f.sk_loja
+JOIN bridge_loja_praca b ON b.cod_loja=l.cod_loja
+JOIN dim_praca d ON d.sk_praca=b.sk_praca
+GROUP BY d.nome_praca,d.domicilios_com_pet 
+ORDER BY faturamento_rateado DESC;
+
+-- faturamento sem loja
+SELECT COUNT(*) AS pedidos_sem_loja, ROUND(SUM(vl_liquido),2) AS faturamento_sem_praca
+FROM fato_pedido WHERE sk_loja=-1;
+
+-- reconciliação de faturamento
+SELECT 
+    (SELECT SUM(vl_liquido) FROM fato_pedido) AS total_rede,
+    (SELECT SUM(f.vl_liquido*b.fator_publico) FROM fato_pedido f 
+    JOIN dim_loja l ON l.sk_loja=f.sk_loja 
+    JOIN bridge_loja_praca b ON b.cod_loja=l.cod_loja) AS total_rateado,
+    (SELECT SUM(vl_liquido) FROM fato_pedido WHERE sk_loja=-1) AS sem_loja,
+    ROUND((SELECT SUM(vl_liquido) FROM fato_pedido)
+- (SELECT SUM(f.vl_liquido*b.fator_publico) FROM fato_pedido f JOIN dim_loja l ON l.sk_loja=f.sk_loja JOIN bridge_loja_praca b ON b.cod_loja=l.cod_loja)
+- (SELECT SUM(vl_liquido) FROM fato_pedido WHERE sk_loja=-1),2) AS diferenca;
 
 
 -- =====================================================================================
@@ -158,50 +210,38 @@ ORDER BY faturamento_rateado DESC;
 -- >>> ESCREVA AQUI as consultas da P5
 
 
--- =====================================================================================
---  P5 (a) - DENSIDADE DE VENDAS (ITENS / MIL HABITANTES) E TEMPO MÉDIO DE LOGÍSTICA
---  ORDENADOS POR MIL HABITANTES (DESCENDENTE)
--- ===================================================================================
-SELECT 
-    l.nome_loja,
-    p.nome_praca,
-    p.domicilios_com_pet AS populacao_referencia,
-    -- Aplicando o fator de rateio entre lojas na quantidade de itens para evitar duplicação
-    ROUND(SUM(f.qt_itens * b.fator_publico), 0) AS total_itens_rateados, 
-    -- Aplicando o rateio no cálculo de densidade
-    ROUND((SUM(f.qt_itens * b.fator_publico) * 1000.0) / NULLIF(p.domicilios_com_pet, 0), 2) AS itens_por_mil_habitantes,
-    ROUND(AVG(f.dias_total_ate_entrega), 1) AS tempo_medio_entrega_dias
-FROM fato_pedido f
-JOIN dim_loja l ON f.sk_loja = l.sk_loja
-JOIN bridge_loja_praca b ON l.cod_loja = b.cod_loja
-JOIN dim_praca p ON b.sk_praca = p.sk_praca
-GROUP BY l.nome_loja, p.nome_praca, p.domicilios_com_pet
-ORDER BY itens_por_mil_habitantes DESC;
+-- ============================================================================================
+--  P5(a)  - RANKING DE LOJAS POR ITENS POR MIL HABITANTES X TEMPO MÉDIO DE ENTREGA
+-- ============================================================================================
 
--- =====================================================================================
---  P5 (a) - DENSIDADE DE VENDAS x LOGÍSTICA 
---   ORDENADOS POR TEMPO MEDIA ENTREGA (DESCENDENTE)
--- ===================================================================================
-SELECT 
-    l.nome_loja,
-    p.nome_praca,
-    p.domicilios_com_pet AS populacao_referencia,
-    -- Aplicando o rateio na quantidade de itens para evitar duplicação
-    ROUND(SUM(f.qt_itens * b.fator_publico), 0) AS total_itens_rateados,
-    -- Aplicando o rateio no cálculo de densidade
-    ROUND((SUM(f.qt_itens * b.fator_publico) * 1000.0) / NULLIF(p.domicilios_com_pet, 0), 2) AS itens_por_mil_habitantes,
-    ROUND(AVG(f.dias_total_ate_entrega), 1) AS tempo_medio_entrega_dias
-FROM fato_pedido f
-JOIN dim_loja l ON f.sk_loja = l.sk_loja
-JOIN bridge_loja_praca b ON l.cod_loja = b.cod_loja
-JOIN dim_praca p ON b.sk_praca = p.sk_praca
-GROUP BY l.nome_loja, p.nome_praca, p.domicilios_com_pet
-ORDER BY tempo_medio_entrega_dias DESC;
+SELECT
+    dl.nome_loja,
+    dl.cidade,
+    dl.porte,
+    dl.populacao_cidade,
+    SUM(fp.qt_itens) AS total_itens_vendidos,
+    ROUND(
+        1000.0 * SUM(fp.qt_itens) / NULLIF(dl.populacao_cidade, 0),
+        2
+    ) AS itens_por_mil_habitantes,
+    ROUND(AVG(fp.dias_total_ate_entrega), 2) AS media_dias_entrega
+FROM fato_pedido fp
+JOIN dim_loja dl ON fp.sk_loja = dl.sk_loja
+WHERE fp.qt_itens IS NOT NULL
+  AND dl.populacao_cidade IS NOT NULL
+  AND dl.populacao_cidade > 0
+GROUP BY
+    dl.nome_loja,
+    dl.cidade,
+    dl.porte,
+    dl.populacao_cidade
+HAVING COUNT(fp.dias_total_ate_entrega) > 0
+ORDER BY itens_por_mil_habitantes DESC;
 
 
 -- =====================================================================================
 --  P5 (b) - FATURAMENTO POR FAIXA DE FRANQUIA (Visão do cadastro atual)
---  (b) --Mostre o faturamento por faixa de franquia e explique por que ele NAO
+--      Mostre o faturamento por faixa de franquia e explique por que ele NAO
 --      responde "quanto veio de lojas que JA ERAM Ouro na data do pedido": o
 --      cadastro so tem a foto de hoje.
 -- =====================================================================================
@@ -217,28 +257,45 @@ ORDER BY faturamento_total DESC;
 
 -- =====================================================================================
 --  P5 (c) - MEDIÇÃO DOS RESÍDUOS (Auditoria de Qualidade)
---  (c) --Meça o que ficou de fora: pedidos sem loja, entregas nao concluidas,
+--      Meça o que ficou de fora: pedidos sem loja, entregas nao concluidas,
 --      itens ou valores em branco/zerados  
 -- =====================================================================================
 SELECT 
-    'Pedidos sem loja identificada' AS indicador, 
-    COUNT(*) AS total_registros
-FROM fato_pedido 
--- buscando a chave -1 
-WHERE sk_loja = -1 
+    'Total Geral de Pedidos (Base)' AS indicador,
+    COUNT(*) AS total_registros,
+    100.00 AS percentual
+FROM fato_pedido
 
 UNION ALL
 
 SELECT 
-    'Entregas não concluídas' AS indicador, 
-    COUNT(*) AS total_registros
-FROM fato_pedido 
-WHERE dias_total_ate_entrega IS NULL
+    'Entregas não concluídas' AS indicador,
+    SUM(CASE WHEN dias_total_ate_entrega IS NULL THEN 1 ELSE 0 END) AS total_registros,
+    ROUND(100.0 * SUM(CASE WHEN dias_total_ate_entrega IS NULL THEN 1 ELSE 0 END) / COUNT(*), 2) AS percentual
+FROM fato_pedido
 
 UNION ALL
 
 SELECT 
-    'Itens ou valores em branco/zerados' AS indicador, 
-    COUNT(*) AS total_registros
-FROM fato_pedido 
-WHERE qt_itens IS NULL OR qt_itens = 0 OR vl_liquido IS NULL OR vl_liquido = 0;
+    'Itens em branco ' AS indicador,
+    SUM(CASE WHEN qt_itens IS NULL THEN 1 ELSE 0 END) AS total_registros,
+    ROUND(100.0 * SUM(CASE WHEN qt_itens IS NULL THEN 1 ELSE 0 END) / COUNT(*), 2) AS percentual
+FROM fato_pedido
+
+UNION ALL
+
+SELECT 
+    'Ítens sem valor' AS indicador,
+    SUM(CASE WHEN vl_liquido IS NULL THEN 1 ELSE 0 END) AS total_registros,
+    ROUND(100.0 * SUM(CASE WHEN vl_liquido IS NULL THEN 1 ELSE 0 END) / COUNT(*), 2) AS percentual
+FROM fato_pedido
+
+UNION ALL
+
+SELECT 
+    'Pedidos sem loja identificada' AS indicador,
+    SUM(CASE WHEN sk_loja = -1 THEN 1 ELSE 0 END) AS total_registros,
+    ROUND(100.0 * SUM(CASE WHEN sk_loja = -1 THEN 1 ELSE 0 END) / COUNT(*), 2) AS percentual
+FROM fato_pedido
+
+ORDER BY total_registros DESC;

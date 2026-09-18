@@ -43,7 +43,11 @@
 -- Limpa a tabela para não dar erro se rodarmos mais de uma vez
 DELETE FROM dim_categoria;
 
+
+
 -- Linha -1 OBRIGATÓRIA
+TRUNCATE TABLE bridge_loja_praca, dim_categoria, dim_praca CASCADE;
+
 INSERT INTO dim_categoria (sk_categoria, categoria_origem, nome_categoria, grupo_categoria)
 VALUES (-1, 'Nao Informado', 'Nao Informado', 'Nao Informado');
 

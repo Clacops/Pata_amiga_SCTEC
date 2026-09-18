@@ -1,0 +1,48 @@
+
+
+========================================================================================
+TABELA DE RECONCILIAÇÃO QUANTITATIVA - AUDITORIA DE DADOS (DW PATA AMIGA)
+========================================================================================
++--------------------------------------+----------+------------+--------+
+| TESTE AUDITADO                       |  OBTIDO  |  ESPERADO  | STATUS |
++--------------------------------------+----------+------------+--------+
+| stg_pedido                           |    4.044 |      4.044 |   OK   |
+| stg_loja                             |       32 |         32 |   OK   |
+| stg_loja_praca                       |       48 |         48 |   OK   |
+| dim_tempo                            |      236 |        236 |   OK   |
+| dim_loja                             |       33 |         33 |   OK   |
+| dim_categoria                        |       38 |         38 |   OK   |
+| dim_praca                            |       13 |         13 |   OK   |
+| bridge_loja_praca                    |       48 |         48 |   OK   |
+| fato_pedido                          |    4.044 |      4.044 |   OK   |
+| Categorias padronizadas              |        8 |          8 |   OK   |
+| sk_loja nula/orfa                    |        0 |          0 |   OK   |
+| sk_categoria nula/orfa               |        0 |          0 |   OK   |
+| sk_tempo_entrega nula/orfa           |        0 |          0 |   OK   |
+| Pedidos sem loja (sk_loja = -1)      |        3 |          3 |   OK   |
+| Pedidos sem entrega (sk_tempo = -1)  |    1.953 |      1.953 |   OK   |
+| Pedidos via WhatsApp                 |      414 |        414 |   OK   |
+| Pedidos sem itens (qt_itens NULL)    |      257 |        257 |   OK   |
+| Pedidos sem valor (vl_liquido NULL)  |      121 |        121 |   OK   |
++--------------------------------------+----------+------------+--------+
+RESULTADO GLOBAL: 100% CONFORME (18/18 TESTES VALIDADOS)
+========================================================================================
+
+
+========================================================================================
+TABELA DE RECONCILIAÇÃO FINANCEIRA - AUDITORIA DE VALORES (DW PATA AMIGA)
+========================================================================================
++------------------------------------------+-----------------+-----------------+--------+
+| INDICADOR CONTÁBIL / MÉTRICA             |   OBTIDO (R$)   |  ESPERADO (R$)  | STATUS |
++------------------------------------------+-----------------+-----------------+--------+
+| Faturamento Total (stg_pedido)           |    1.793.308,51 |    1.793.308,51 |   OK   |
+| Faturamento Total (fato_pedido)          |    1.793.308,51 |    1.793.308,51 |   OK   |
+| Faturamento Rateado (Praças / Bridge)    |    1.792.322,21 |    1.792.322,21 |   OK   |
+| Faturamento Sem Loja (sk_loja = -1)      |          986,30 |          986,30 |   OK   |
+| Soma Rateio + Sem Loja                   |    1.793.308,51 |    1.793.308,51 |   OK   |
++------------------------------------------+-----------------+-----------------+--------+
+| DIFERENÇA DE RECONCILIAÇÃO (CENTAVOS)    |            0,00 |            0,00 |   OK   |
++------------------------------------------+-----------------+-----------------+--------+
+FECHAMENTO CONTÁBIL: 100% RECONCILIADO (PRECISÃO DECIMAL EXATA: ZERO ERRO)
+========================================================================================
+
